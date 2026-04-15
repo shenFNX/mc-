@@ -267,7 +267,7 @@
         servers.forEach((s, index) => {
             const encodedIcon = encodeURIComponent(s.icon);
             const fullAddress = `${s.ip}:${s.port}`;
-            const iframeUrl = `https://motd.minebbs.com/iframe?ip=${s.ip}&port=${s.port}&stype=auto&dark=true&icon=${encodedIcon}`;
+            const iframeUrl = `https://motd.minebbs.com/iframe?ip=${s.ip}&port=${s.port}&stype=auto&dark=false&icon=${encodedIcon}`;
 
             const item = document.createElement('div');
             item.className = 'server-item';
