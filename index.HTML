@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC 服务器矩阵 - 监控面板</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap');
+
+        :root {
+            --bg: #060608;
+            --card-bg: #121215;
+            --accent: #00ff88;
+            --border: rgba(255, 255, 255, 0.08);
+            --modal-bg: rgba(18, 18, 21, 0.9);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: #fff;
+            font-family: 'Inter', "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 100px;
+        }
+
+        header {
+            padding: 80px 20px 50px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            margin: 0;
+            background: linear-gradient(to bottom, #fff 30%, #444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .list-container {
+            width: 100%;
+            max-width: 850px; /* 稍微放宽一点以容纳地址 */
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            padding: 0 20px;
+        }
+
+        .server-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .server-item:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.15);
+        }
+
+        .item-label {
+            padding: 18px 25px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 名字与地址组合区 */
+        .name-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .server-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .server-title b { color: var(--accent); font-family: 'JetBrains Mono'; }
+
+        /* 地址标签样式 */
+        .addr-tag {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #aaa;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 复制按钮样式 */
+        .copy-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .copy-btn:hover {
+            filter: brightness(1.2);
+            transform: scale(1.05);
+        }
+
+        .copy-btn.success {
+            background: #fff;
+        }
+
+        .preview-area {
+            width: 100%;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 10px;
+            pointer-events: none;
+        }
+
+        iframe {
+            border: none;
+            width: 700px;
+            height: 420px;
+        }
+
+        /* --- 模态框 --- */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active { display: flex; opacity: 1; }
+
+        .modal {
+            width: 70vw;
+            height: 70vh;
+            background: var(--modal-bg);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.9);
+            transition: transform 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.28);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+        }
+
+        .overlay.active .modal { transform: scale(1); }
+
+        .modal-header {
+            padding: 25px 40px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover { background: var(--accent); color: #000; }
+
+        .modal-body {
+            flex: 1;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .zoom-container {
+            width: 700px;
+            height: 350px;
+            transform: scale(1.2);
+        }
+
+        footer {
+            margin-top: 100px;
+            opacity: 0.3;
+            font-size: 0.8rem;
+            letter-spacing: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>SERVER CLUSTER</h1>
+        <div style="font-size:0.7rem; color:var(--accent); margin-top:10px; letter-spacing:3px;">&lt; NETWORK_STATUS_ACTIVE /&gt;</div>
+    </header>
+
+    <div class="list-container" id="serverList"></div>
+
+    <div class="overlay" id="overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle" style="margin:0; font-size:1.4rem;">服务器详细状态</h2>
+                <button class="close-btn" onclick="closeModal()">关闭 ESC</button>
+            </div>
+            <div class="modal-body">
+                <div class="zoom-container">
+                    <iframe id="modalIframe" src="" scrolling="no"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const servers = [
+            {
+                name: "新星工程",
+                ip: "game.gaytnh.cn",
+                port: "25568",
+                icon: "https://brave.wzznft.com/i/2026/04/15/e2xp2j.png"
+            },
+            {
+                name: "格雷科技:新视野",
+                ip: "game.gaytnh.cn",
+                port: "25569",
+                icon: "https://brave.wzznft.com/i/2026/04/15/dwb9fr.png"
+            }
+        ];
+
+        const listContainer = document.getElementById('serverList');
+        const overlay = document.getElementById('overlay');
+        const modalIframe = document.getElementById('modalIframe');
+        const modalTitle = document.getElementById('modalTitle');
+
+        servers.forEach((s, index) => {
+            const encodedIcon = encodeURIComponent(s.icon);
+            const fullAddress = `${s.ip}:${s.port}`;
+            const iframeUrl = `https://motd.minebbs.com/iframe?ip=${s.ip}&port=${s.port}&stype=auto&dark=true&icon=${encodedIcon}`;
+
+            const item = document.createElement('div');
+            item.className = 'server-item';
+            item.innerHTML = `
+                <div class="item-label">
+                    <div class="name-box">
+                        <span class="server-title"><b>#${String(index + 1).padStart(2, '0')}</b> ${s.name}</span>
+                        <div class="addr-tag">
+                            ${fullAddress}
+                            <button class="copy-btn" onclick="copyAddress(event, '${fullAddress}')">复制</button>
+                        </div>
+                    </div>
+                    <span style="font-size:0.7rem; opacity:0.3; letter-spacing:1px;">DETAILS &rsaquo;</span>
+                </div>
+                <div class="preview-area">
+                    <iframe src="${iframeUrl}" scrolling="no"></iframe>
+                </div>
+            `;
+            
+            item.onclick = () => {
+                modalTitle.innerText = s.name;
+                modalIframe.src = iframeUrl;
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+
+            listContainer.appendChild(item);
+        });
+
+        // 一键复制功能
+        function copyAddress(event, text) {
+            event.stopPropagation(); // 关键：阻止点击按钮时打开模态框
+            
+            const btn = event.currentTarget;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = "已复制!";
+                btn.classList.add('success');
+                
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('success');
+                }, 1500);
+            });
+        }
+
+        function closeModal() {
+            overlay.classList.remove('active');
+            document.body.style.overflow = 'auto';
+            setTimeout(() => { modalIframe.src = ""; }, 300);
+        }
+
+        overlay.onclick = (e) => { if(e.target === overlay) closeModal(); };
+        document.addEventListener('keydown', (e) => { if(e.key === "Escape") closeModal(); });
+    </script>
+</body>
+</html>
